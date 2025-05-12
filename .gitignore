@@ -1,3 +1,19 @@
-__pycache__/
+## Securely add passwords, etc.
 .env
-.venv
+
+## Byte-code files
+*.pyc
+__pycache__/
+
+## Environments
+.venv/
+*.egg/
+*.egg-info/
+dist/
+build/
+
+## Editors/IDE files
+.idea/
+.vscode/
+# vim?
+*.swap
