@@ -1,6 +1,6 @@
 from collections import defaultdict
-from typing import Any, Iterator, Literal, Optional, cast
 from dataclasses import dataclass
+from typing import Any, Iterator, Literal, Optional, cast
 
 import pandas as pd
 from sqlalchemy import Column, Connection, ForeignKey, MetaData, Table
@@ -9,12 +9,12 @@ from sqlalchemy.types import TypeEngine as SQLType
 from sto_libdata.dataframe_handling.dataframe_handler import DataFrameHandler
 
 
-
 class PushableDF:
     """
     An enriched dataframe with information regarding its representation in
     the database.
     """
+
     def __init__(
         self,
         df: pd.DataFrame,
@@ -22,7 +22,7 @@ class PushableDF:
         coltypes: dict[str, SQLType],
         primary_key: str = "ID",
         foreign_keys: dict[str, ForeignKey] = {},
-        constraints: dict[str, dict[str, Any]] = {}
+        constraints: dict[str, dict[str, Any]] = {},
     ) -> None:
         """
         Args:
@@ -40,8 +40,8 @@ class PushableDF:
                 Defaults to "ID". Currently, there is no support for multicolumn
                 primary keys nor "autoincrement"-style features.
             foreign_keys: A dictionary mapping column names to sqlalchemy.
-                ForeignKey objects. Tables and columns being pointed to should 
-                either already exist in the database or be created in a the same 
+                ForeignKey objects. Tables and columns being pointed to should
+                either already exist in the database or be created in a the same
                 batch as the current dataframe.
             constraints: A dictionary mapping column names to a dictionary with
                 the sqlalchemy constraints that column should have (check their
@@ -53,12 +53,14 @@ class PushableDF:
         self.__df = df
         self.__table_name = table_name
         self.__coltypes = self.__infer_remaining_coltypes(coltypes)
-        assert primary_key in coltypes.keys(), "Specified PK not found among dataframe columns."
+        assert primary_key in coltypes.keys(), (
+            "Specified PK not found among dataframe columns."
+        )
 
-        basedict= {name: {} for name in coltypes.keys()}
+        basedict = {name: {} for name in coltypes.keys()}
         self.__constraints = basedict | constraints
-        self.__constraints[primary_key]["primary_key"]=True
-        self.__constraints[primary_key]["autoincrement"]=False
+        self.__constraints[primary_key]["primary_key"] = True
+        self.__constraints[primary_key]["autoincrement"] = False
         self.__foreign_keys = foreign_keys
 
         self.__table: Optional[Table] = None
@@ -72,7 +74,9 @@ class PushableDF:
     def get_coltypes(self) -> dict[str, SQLType]:
         return self.__coltypes
 
-    def __infer_remaining_coltypes(self, specified: dict[str, SQLType]) -> dict[str, SQLType]:
+    def __infer_remaining_coltypes(
+        self, specified: dict[str, SQLType]
+    ) -> dict[str, SQLType]:
         df_columns = set(str(col) for col in self.__df.columns)
 
         specified_columns = set(specified.keys())
@@ -80,24 +84,25 @@ class PushableDF:
         df_handler = DataFrameHandler()
 
         return {
-            col: specified[col] 
-            if col in specified_columns 
-            else df_handler.infer_SQL_type(self.__df[col]) 
+            col: specified[col]
+            if col in specified_columns
+            else df_handler.infer_SQL_type(self.__df[col])
             for col in df_columns
         }
 
-    def _instantiate_underlying_table(
-        self,
-        metadata : MetaData
-    ) -> None:
-
+    def _instantiate_underlying_table(self, metadata: MetaData) -> None:
         column_positional_constraints = {name: [] for name in self.__coltypes.keys()}
 
         for col, v in self.__foreign_keys.items():
-            column_positional_constraints[col]=[v]
+            column_positional_constraints[col] = [v]
 
         columns = (
-            Column(name, type_, *column_positional_constraints[name], **self.__constraints[name])
+            Column(
+                name,
+                type_,
+                *column_positional_constraints[name],
+                **self.__constraints[name],
+            )
             for name, type_ in self.__coltypes.items()
         )
 
@@ -112,9 +117,10 @@ class PushableDF:
 
     def get_foreign_keys(self) -> Iterator[str]:
         return (
-            fk.target_fullname.rsplit(".", 1)[0].split(".",1)[-1] 
+            fk.target_fullname.rsplit(".", 1)[0].split(".", 1)[-1]
             for fk in self.__foreign_keys.values()
         )
+
 
 class _PushableDataframes:
     def __init__(self, *pdfs: PushableDF) -> None:
@@ -123,24 +129,19 @@ class _PushableDataframes:
         self.__names = set(self.__name_index.keys())
         self.__is_sorted = False
 
-    def __get_relevant_fks(
-        self,
-        name: str
-    ) -> list[str]:
+    def __get_relevant_fks(self, name: str) -> list[str]:
         return [
             referenced
             for referenced in self.__name_index[name].get_foreign_keys()
             if referenced in self.__names
         ]
 
-    def __sort_insertably(
-        self
-    ) -> None:
+    def __sort_insertably(self) -> None:
         """
-        Performs a topological ordering of the table DAG. 
+        Performs a topological ordering of the table DAG.
         See https://en.wikipedia.org/wiki/Topological_sorting.
 
-        This is needed so that tables with foreign keys pointing to others are 
+        This is needed so that tables with foreign keys pointing to others are
         inserted after the pointee.
 
         Nodes correspond to tables (actually, their names are the nodes) and
@@ -156,16 +157,13 @@ class _PushableDataframes:
         index = {}
         # {name: names that reference it}
         inverted_index = defaultdict(set)
-        
+
         for name in self.__names:
             index[name] = self.__get_relevant_fks(name)
             for referenced in index[name]:
                 inverted_index[referenced].add(name)
 
-        roots = (
-            name for name in self.__names
-            if len(inverted_index[name])==0
-        )
+        roots = (name for name in self.__names if len(inverted_index[name]) == 0)
 
         depths = {name: 0 for name in self.__names}
 
@@ -189,24 +187,23 @@ class _PushableDataframes:
     def __len__(self) -> int:
         return len(self.__pdfs)
 
-    def insert(
-        self,
-        schema_name: str,
-        con: Connection
-    ) -> None:
+    def insert(self, schema_name: str, con: Connection) -> None:
         self.__sort_insertably()
         for pdf in self.__pdfs:
-            print(pdf.get_name())
-            dtype = cast(None, pdf.get_coltypes()) # This is just to make the LSP shut up. Just returns pdf.get_coltypes() at runtime.
+            dtype = cast(
+                None, pdf.get_coltypes()
+            )
+
             pdf.get_dataframe().to_sql(
-                schema = schema_name,
-                name = pdf.get_name(),
-                con = con,
+                schema=schema_name,
+                name=pdf.get_name(),
+                con=con,
                 if_exists="append",
                 dtype=dtype,
                 chunksize=1000,
-                index=False
+                index=False,
             )
+
 
 class _PushableDataframesWithMetadata:
     def __init__(self, metadata: MetaData, pdfs: _PushableDataframes) -> None:
@@ -218,12 +215,10 @@ class _PushableDataframesWithMetadata:
         for pdf in self.__pdfs:
             pdf._instantiate_underlying_table(self.__metadata)
 
-    def push(
-        self,
-        con: Connection
-    ) -> None:
+    def push(self, con: Connection) -> None:
         tables = cast(list[Table], [pdf.get_underlying_table() for pdf in self.__pdfs])
         self.__metadata.create_all(con, tables=tables)
+
 
 @dataclass
 class PushConfig:
@@ -239,8 +234,9 @@ class PushConfig:
             dataframe is properly normalized, and raise an exception if not.
             Defaults to True.
     """
+
     if_exists: Literal["fail", "replace", "append"] = "fail"
     fail_if_not_normalized: bool = True
 
-PushableDFWithConfig = tuple[PushableDF, PushConfig]
 
+PushableDFWithConfig = tuple[PushableDF, PushConfig]
