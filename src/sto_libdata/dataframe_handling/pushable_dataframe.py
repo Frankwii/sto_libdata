@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
+from itertools import chain
 from typing import Any, Iterator, Literal, Optional, cast
 
 import pandas as pd
@@ -190,9 +191,7 @@ class _PushableDataframes:
     def insert(self, schema_name: str, con: Connection) -> None:
         self.__sort_insertably()
         for pdf in self.__pdfs:
-            dtype = cast(
-                None, pdf.get_coltypes()
-            )
+            dtype = cast(None, pdf.get_coltypes())
 
             pdf.get_dataframe().to_sql(
                 schema=schema_name,
@@ -209,13 +208,24 @@ class _PushableDataframesWithMetadata:
     def __init__(self, metadata: MetaData, pdfs: _PushableDataframes) -> None:
         self.__pdfs = pdfs
         self.__name_index = {pdf.get_name(): pdf for pdf in self.__pdfs}
-        self.__names = set(self.__name_index.keys())
+        self.__loaded_names = set(self.__name_index.keys())
         self.__metadata = metadata
 
         for pdf in self.__pdfs:
             pdf._instantiate_underlying_table(self.__metadata)
 
+    def __load_foreign_key_metadata(self, con: Connection) -> None:
+        pointee_table_names = chain.from_iterable(
+            pdf.get_foreign_keys() for pdf in self.__pdfs
+        )
+
+        for pointee_name in pointee_table_names:
+            if pointee_name not in self.__loaded_names:
+                Table(pointee_name, self.__metadata, autoload_with=con)
+                self.__loaded_names.add(pointee_name)
+
     def push(self, con: Connection) -> None:
+        self.__load_foreign_key_metadata(con)
         tables = cast(list[Table], [pdf.get_underlying_table() for pdf in self.__pdfs])
         self.__metadata.create_all(con, tables=tables)
 
