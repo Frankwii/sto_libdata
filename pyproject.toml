@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sto-libdata"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
   { name="Frank William Hammond Espinosa", email="frank.hammond@fueib.org" },
 ]
@@ -20,7 +20,8 @@ keywords = ["sto"]
 dependencies = [
   "pandas",
   "sqlalchemy",
-  "dotenv"
+  "dotenv",
+  "pyodbc"
 ]
 
 [project.urls]
