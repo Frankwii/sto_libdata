@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sto-libdata"
-version = "0.1.1"
+version = "0.2.0"
 authors = [
   { name="Frank William Hammond Espinosa", email="frank.hammond@fueib.org" },
 ]
@@ -26,3 +26,7 @@ dependencies = [
 
 [project.urls]
 "Source" = "https://github.com/Frankwii/sto_libdata"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "src"]
