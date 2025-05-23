@@ -1,5 +1,6 @@
 import pandas as pd
-from sqlalchemy import CHAR, Boolean, Float, Integer, String
+import numpy as np
+from sqlalchemy import CHAR, DATE, DATETIME, Boolean, Float, Integer, String
 from sto_libdata.dataframe_handling.dataframe_handler import DataFrameHandler
 
 
@@ -12,7 +13,7 @@ def assert_type_comparison(type_dict1, type_dict2):
         assert repr(type_dict1[key]) == repr(type_dict2[key]), str(key)
 
 
-def test_character_inference():
+def test_name_inference():
     handler = DataFrameHandler()
 
 
@@ -34,11 +35,11 @@ def test_character_inference():
 
     assert_type_comparison(expected_types, inferred_types)
 
-def test_boolean_inference():
+def test_dtype_inference():
     handler = DataFrameHandler()
     mock_df = pd.DataFrame({
         "ID": [1, 2, 3, 4],
-        "SW_MB": [True, True, False, None],
+        "BOOL_NULL": [True, True, False, None],
         "BAD_NAME": [True, True, False, True],
         "BAD_NAME2": [3, 5, 6, 10],
         "BAD_NAME3": ["aaa", "bbb", "ccc", None],
@@ -47,7 +48,7 @@ def test_boolean_inference():
 
     expected_types = {
         "ID": Integer(),
-        "SW_MB": Boolean(),
+        "BOOL_NULL": Boolean(),
         "BAD_NAME": Boolean(),
         "BAD_NAME2": Integer(),
         "BAD_NAME3": CHAR(3),
@@ -57,3 +58,24 @@ def test_boolean_inference():
     inferred_types = handler.infer_SQL_types(mock_df)
     
     assert_type_comparison(expected_types, inferred_types)
+
+
+def test_value_inference():
+    handler = DataFrameHandler()
+    mock_df = pd.DataFrame({
+        "BAD_NAME1": ["Port", "Esp", "ALEMANIA"],
+        "BAD_NAME2": [np.datetime64("2000-01-01"), np.datetime64("2001-01-01"), np.datetime64("2002-01-01")],
+        "BAD_NAME3": [np.datetime64("2000-01-01 00:00:01"), np.datetime64("2000-01-01 00:01:00"), np.datetime64("2000-01-01 01:00:00")],
+    })
+
+    expected_types = {
+        "BAD_NAME1": String(16),
+        "BAD_NAME2": DATE(),
+        "BAD_NAME3": DATETIME(),
+    }
+
+    inferred_types = handler.infer_SQL_types(mock_df)
+    
+    assert_type_comparison(expected_types, inferred_types)
+
+

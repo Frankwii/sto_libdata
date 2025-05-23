@@ -86,8 +86,10 @@ class ConnectionHandler:
             df for df, config, _ in pdf_data if config.fail_if_not_normalized
         )
 
-        for df in should_fail_if_not_normalized:
-            self.__dataframe_handler.assert_normalized(df.get_dataframe())
+        for pdf in should_fail_if_not_normalized:
+            self.__dataframe_handler.assert_normalized(
+                pdf.get_dataframe(), pdf.get_coltypes(), pdf.get_name()
+            )
 
     def push_tables(
         self,

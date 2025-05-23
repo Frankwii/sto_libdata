@@ -7,13 +7,19 @@ from pandas.api.types import (
     is_string_dtype,
 )
 from pandas.io.sql import Series
-from sqlalchemy import CHAR, DATE, DATETIME, Boolean, Date, Float, Integer
+from sqlalchemy import CHAR, DATE, DATETIME, Boolean, Float, Integer
 from sqlalchemy.types import String
 from sqlalchemy.types import TypeEngine as SQLType
 
+from src.sto_libdata.exceptions.exceptions import NormalizationError
+
 
 class PotentialCHAR(SQLType): ...
+
+
 class PotentialDATE(SQLType): ...
+
+
 class UnknownType(SQLType): ...
 
 
@@ -23,11 +29,46 @@ UndeterminedType = PotentialCHAR | PotentialDATE | UnknownType
 class DataFrameHandler:
     def __init__(self) -> None: ...
 
-    def assert_normalized(self, df: pd.DataFrame) -> None:
+    def assert_normalized(
+        self, df: pd.DataFrame, coltypes: dict[str, SQLType], table_name: str
+    ) -> None:
         """
         Raises a NormalizationError if the given dataframe is not normalized.
         """
-        # Not implemented yet
+        string_column_normalization_data = (
+            (
+                colname,
+                self.determine_string_column_normalization(
+                    pd.Series(df[colname]), colname
+                ),
+            )
+            for colname, coltype in coltypes.items()
+            if isinstance(coltype, String)
+        )
+
+        non_normalized_data = [
+            (colname, reason)
+            for colname, (is_normalized, reason) in string_column_normalization_data
+            if not is_normalized
+        ]
+
+        if len(non_normalized_data) >= 1:
+            raise NormalizationError(table_name, non_normalized_data)
+
+    def determine_string_column_normalization(
+        self, col: pd.Series, name: str
+    ) -> tuple[bool, str]:
+        if len(col.unique()) != len(col):
+            msg = (
+                f"Column {name} is not normalized because it contains"
+                " duplicate strings. Consider creating a separate table"
+                " for this and using foreign keys to it, or if absolutely"
+                " necessary, pass a flag to prevent normalization checking."
+            )
+
+            return False, msg
+
+        return True, ""
 
     def infer_SQL_types(self, df: pd.DataFrame) -> dict[str, SQLType]:
         return {
@@ -36,22 +77,25 @@ class DataFrameHandler:
         }
 
     def infer_SQL_type(self, col: pd.Series, col_name: str) -> SQLType:
-        inferred_type = self.infer_by_name(col_name)
+        inferred_type = self.__infer_by_name(col_name)
         if not isinstance(inferred_type, UndeterminedType):
             return inferred_type
 
-        inferred_type = self.infer_by_dtype(col)
+        inferred_type = self.__infer_by_dtype(col)
         if not isinstance(inferred_type, UndeterminedType):
             return inferred_type
 
-        inferred_type = self.infer_by_value(inferred_type, col)
+        inferred_type = self.__infer_by_value(inferred_type, col)
         if not isinstance(inferred_type, UndeterminedType):
             return inferred_type
 
         raise TypeError(f"Unable to infer type for column {col}")
 
-    def infer_by_name(self, column_name: str) -> SQLType:
+    def __infer_by_name(self, column_name: str) -> SQLType:
         upper = column_name.upper()
+        if upper == "DATE":
+            return DATE()
+
         prefix = f"{upper}_"[:3]
 
         match prefix:
@@ -78,7 +122,7 @@ class DataFrameHandler:
 
         return UnknownType()
 
-    def infer_by_dtype(self, col: pd.Series) -> SQLType:
+    def __infer_by_dtype(self, col: pd.Series) -> SQLType:
         nonnull = pd.Series(col[col.isna() == False])
 
         if len(nonnull) == 0:
@@ -86,20 +130,21 @@ class DataFrameHandler:
                 f"Trying to insert a completely null column!. Name: {col.name}"
             )
 
-        if is_bool_dtype(nonnull):
+        inferred_dtype = nonnull.infer_objects().dtype
+        if is_bool_dtype(inferred_dtype):
             return Boolean()
-        elif is_integer_dtype(nonnull):
+        elif is_integer_dtype(inferred_dtype):
             return Integer()
-        elif is_float_dtype(nonnull):
+        elif is_float_dtype(inferred_dtype):
             return Float()
-        elif is_datetime64_dtype(nonnull):
+        elif is_datetime64_dtype(inferred_dtype):
             return PotentialDATE()
-        elif is_string_dtype(nonnull):
+        elif is_string_dtype(inferred_dtype):
             return PotentialCHAR()
         else:
             return UnknownType()
 
-    def infer_by_value(
+    def __infer_by_value(
         self, inferred_dtype: UndeterminedType, col: pd.Series
     ) -> SQLType:
         if isinstance(inferred_dtype, PotentialDATE):
