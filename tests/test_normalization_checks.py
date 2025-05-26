@@ -1,8 +1,9 @@
+import pytest
 import pandas as pd
 
 from src.sto_libdata.dataframe_handling.dataframe_handler import DataFrameHandler
 from src.sto_libdata.dataframe_handling.pushable_dataframe import PushableDF
-from src.sto_libdata.exceptions.exceptions import NormalizationError
+from sto_libdata.exceptions.exceptions import NormalizationError
 
 def test_string_duplication1():
     df = pd.DataFrame({
@@ -24,7 +25,8 @@ def test_string_duplication1():
         coltypes
     )
 
-    handler.assert_normalized(pdf)
+
+    handler.assert_normalized(pdf.get_dataframe(), pdf.get_coltypes(), pdf.get_name())
 
 
 def test_string_duplication2():
@@ -40,15 +42,13 @@ def test_string_duplication2():
 
     name = "MY_DF"
 
-
     pdf = PushableDF(
         df,
         name,
         coltypes
     )
 
-    try:
-        handler.assert_normalized(pdf)
-        raise AssertionError
-    except NormalizationError as e:
-        assert "TX_ES" in str(e)
+    with pytest.raises(NormalizationError) as excinfo:
+        handler.assert_normalized(pdf.get_dataframe(), pdf.get_coltypes(), pdf.get_name())
+
+    assert "TX_ES" in str(excinfo.value)
