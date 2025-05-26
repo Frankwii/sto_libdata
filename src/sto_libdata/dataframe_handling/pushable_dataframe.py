@@ -54,11 +54,11 @@ class PushableDF:
         self.__df = df
         self.__table_name = table_name
         self.__coltypes = self.__infer_remaining_coltypes(coltypes)
-        assert primary_key in coltypes.keys(), (
+        assert primary_key in self.__coltypes.keys(), (
             "Specified PK not found among dataframe columns."
         )
 
-        basedict = {name: {} for name in coltypes.keys()}
+        basedict = {name: {} for name in self.__coltypes.keys()}
         self.__constraints = basedict | constraints
         self.__constraints[primary_key]["primary_key"] = True
         self.__constraints[primary_key]["autoincrement"] = False
@@ -87,7 +87,7 @@ class PushableDF:
         return {
             col: specified[col]
             if col in specified_columns
-            else df_handler.infer_SQL_type(self.__df[col])
+            else df_handler.infer_SQL_type(self.__df[col], col)
             for col in df_columns
         }
 
@@ -102,7 +102,7 @@ class PushableDF:
                 name,
                 type_,
                 *column_positional_constraints[name],
-                **self.__constraints[name],
+                **(self.__constraints[name]),
             )
             for name, type_ in self.__coltypes.items()
         )

@@ -11,7 +11,7 @@ from sqlalchemy import CHAR, DATE, DATETIME, Boolean, Float, Integer
 from sqlalchemy.types import String
 from sqlalchemy.types import TypeEngine as SQLType
 
-from src.sto_libdata.exceptions.exceptions import NormalizationError
+from sto_libdata.exceptions.exceptions import NormalizationError
 
 
 class PotentialCHAR(SQLType): ...
