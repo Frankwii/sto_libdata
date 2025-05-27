@@ -51,4 +51,4 @@ def test_table_extraction():
         "DIM_NAME": expected_dim
     }
 
-    assert_dataframe_dict_equality(normhandler.get_all(), expected_output)
+    assert_dataframe_dict_equality(normhandler.get_state(), expected_output)

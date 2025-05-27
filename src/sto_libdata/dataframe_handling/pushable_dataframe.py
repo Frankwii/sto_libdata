@@ -11,8 +11,7 @@ from sto_libdata.dataframe_handling.dataframe_handler import DataFrameHandler
 
 
 class PushableDF:
-    """
-    An enriched dataframe with information regarding its representation in
+    """An enriched dataframe with information regarding its representation in
     the database.
     """
 
