@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from textwrap import dedent
 from typing import Iterable, Optional
 
-from sqlalchemy import Inspector, MetaData, Table, Column
+from sqlalchemy import Table
 
 class LibdataError(ABC, Exception):
     def __init__(self, errmsg: str, db_name: Optional[str] = None) -> None:

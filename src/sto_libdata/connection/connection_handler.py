@@ -1,6 +1,5 @@
 import pandas as pd
 from sqlalchemy import Connection, MetaData, Table, inspect
-from sqlalchemy.util.langhelpers import class_hierarchy
 
 from sto_libdata.dataframe_handling.dataframe_handler import DataFrameHandler
 from sto_libdata.dataframe_handling.pushable_dataframe import (

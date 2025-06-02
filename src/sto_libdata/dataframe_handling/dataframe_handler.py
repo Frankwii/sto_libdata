@@ -123,7 +123,8 @@ class DataFrameHandler:
         return UnknownType()
 
     def __infer_by_dtype(self, col: pd.Series) -> SQLType:
-        nonnull = pd.Series(col[col.isna() == False])
+        nonnull = pd.Series(col[col.isna() == False]) # noqa: E712
+
 
         if len(nonnull) == 0:
             raise ValueError(
@@ -160,7 +161,7 @@ class DataFrameHandler:
         return DATE()
 
     def resolve_stringtype(self, col: pd.Series) -> SQLType:
-        as_strings = pd.Series(col[col.isna() == False].astype(str))
+        as_strings = pd.Series(col[col.isna() == False].astype(str)) # noqa: E712
 
         lengths = as_strings.apply(len)
 
