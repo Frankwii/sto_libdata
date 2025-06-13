@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy import Connection, MetaData, Table, inspect
 
-from sto_libdata.dataframe_handling.dataframe_handler import DataFrameHandler
+from sto_libdata.dataframe_handling.dataframe_handler import DataFrameTypeHandler
 from sto_libdata.dataframe_handling.pushable_dataframe import (
     PushableDF,
     PushableDFWithConfig,
@@ -32,7 +32,7 @@ class ConnectionHandler:
                 str(self.__metadata.schema), str(self.__con.engine.url.database)
             )
 
-        self.__dataframe_handler = DataFrameHandler()
+        self.__dataframe_handler = DataFrameTypeHandler()
 
     def __schema_exists(self, metadata: MetaData) -> bool:
         return self.__inspector.has_schema(str(metadata.schema))

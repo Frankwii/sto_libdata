@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 
-from sto_libdata.dataframe_handling.dataframe_handler import DataFrameHandler
+from sto_libdata.dataframe_handling.dataframe_handler import DataFrameTypeHandler
 from sto_libdata.dataframe_handling.pushable_dataframe import PushableDF
 from sto_libdata.exceptions.exceptions import NormalizationError
 
@@ -13,7 +13,7 @@ def test_string_duplication1():
         "TX_ES": ["Juan", "Nico", "Álex", "Frank", "Nuevos"]
     })
 
-    handler = DataFrameHandler()
+    handler = DataFrameTypeHandler()
     coltypes = handler.infer_SQL_types(df)
 
     name = "MY_DF"
@@ -37,7 +37,7 @@ def test_string_duplication2():
         "TX_ES": ["Juan", "Juan", "Juan", "Juan", "Juan otra vez"]
     })
 
-    handler = DataFrameHandler()
+    handler = DataFrameTypeHandler()
     coltypes = handler.infer_SQL_types(df)
 
     name = "MY_DF"

@@ -7,7 +7,7 @@ import pandas as pd
 from sqlalchemy import Column, Connection, ForeignKey, MetaData, Table
 from sqlalchemy.types import TypeEngine as SQLType
 
-from sto_libdata.dataframe_handling.dataframe_handler import DataFrameHandler
+from sto_libdata.dataframe_handling.dataframe_handler import DataFrameTypeHandler
 
 
 class PushableDF:
@@ -81,7 +81,7 @@ class PushableDF:
 
         specified_columns = set(specified.keys())
 
-        df_handler = DataFrameHandler()
+        df_handler = DataFrameTypeHandler()
 
         return {
             col: specified[col]

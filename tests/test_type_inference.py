@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sqlalchemy import CHAR, DATE, DATETIME, Boolean, Float, Integer, String
-from sto_libdata.dataframe_handling.dataframe_handler import DataFrameHandler
+from sto_libdata.dataframe_handling.dataframe_handler import DataFrameTypeHandler
 
 
 def assert_type_comparison(type_dict1, type_dict2):
@@ -14,7 +14,7 @@ def assert_type_comparison(type_dict1, type_dict2):
 
 
 def test_name_inference():
-    handler = DataFrameHandler()
+    handler = DataFrameTypeHandler()
 
 
     mock_df = pd.DataFrame({
@@ -36,7 +36,7 @@ def test_name_inference():
     assert_type_comparison(expected_types, inferred_types)
 
 def test_dtype_inference():
-    handler = DataFrameHandler()
+    handler = DataFrameTypeHandler()
     mock_df = pd.DataFrame({
         "ID": [1, 2, 3, 4],
         "BOOL_NULL": [True, True, False, None],
@@ -61,7 +61,7 @@ def test_dtype_inference():
 
 
 def test_value_inference():
-    handler = DataFrameHandler()
+    handler = DataFrameTypeHandler()
     mock_df = pd.DataFrame({
         "BAD_NAME1": ["Port", "Esp", "ALEMANIA"],
         "BAD_NAME2": [np.datetime64("2000-01-01"), np.datetime64("2001-01-01"), np.datetime64("2002-01-01")],

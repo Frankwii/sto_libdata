@@ -12,6 +12,7 @@ from sqlalchemy.types import String
 from sqlalchemy.types import TypeEngine as SQLType
 
 from sto_libdata.exceptions.exceptions import NormalizationError
+from concurrent.futures import ProcessPoolExecutor
 
 
 class PotentialCHAR(SQLType): ...
@@ -25,8 +26,16 @@ class UnknownType(SQLType): ...
 
 UndeterminedType = PotentialCHAR | PotentialDATE | UnknownType
 
+def _infer_column_type(t: tuple[str, Series]) -> tuple[str, SQLType]:
+    return __infer_column_type(*t)
 
-class DataFrameHandler:
+
+def __infer_column_type(name: str, column: Series) -> tuple[str, SQLType]:
+    handler = DataFrameTypeHandler()
+
+    return name, handler.infer_SQL_type(column, name)
+
+class DataFrameTypeHandler:
     def __init__(self) -> None: ...
 
     def assert_normalized(
@@ -71,10 +80,16 @@ class DataFrameHandler:
         return True, ""
 
     def infer_SQL_types(self, df: pd.DataFrame) -> dict[str, SQLType]:
-        return {
-            str(col_name): self.infer_SQL_type(Series(df[col_name]), col_name)
-            for col_name in df.columns
-        }
+
+        names_and_columns = [(name, Series(df[name])) for name in df.columns]
+
+        with ProcessPoolExecutor() as executor:
+            names_and_inferred_types = list(executor.map(
+                _infer_column_type,
+                names_and_columns
+            ))
+
+        return {name: inferred_type for (name, inferred_type) in names_and_inferred_types}
 
     def infer_SQL_type(self, col: pd.Series, col_name: str) -> SQLType:
         inferred_type = self.__infer_by_name(col_name)
