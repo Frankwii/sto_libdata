@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sto-libdata"
-version = "0.5.0"
+version = "1.0.0"
 authors = [
   { name="Frank William Hammond Espinosa", email="frank.hammond@fueib.org" },
 ]

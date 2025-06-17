@@ -4,7 +4,10 @@ from typing import Iterable
 
 import pandas as pd
 
-from src.sto_libdata.dataframe_handling.normalization import NormalizationHandler
+from src.sto_libdata.dataframe_handling.normalization import (
+    NamedDataFrame,
+    NormalizationHandler,
+)
 
 
 def assert_dataframe_equality(df1: pd.DataFrame, df2: pd.DataFrame, name: str) -> None:
@@ -41,9 +44,9 @@ def get_not_normalized_dataframe():
 def test_table_extraction():
     df = get_not_normalized_dataframe()
 
-    normhandler = NormalizationHandler(df, "MY_FAC_TABLE")
+    normhandler = NormalizationHandler(NamedDataFrame(df=df, name="MY_FAC_TABLE"))
 
-    normhandler.extract_new_table({"TX_ES"}, "DIM_NAME")
+    normhandler.extract_new_table("MY_FAC_TABLE", {"TX_ES"}, "DIM_NAME")
 
     expected_fac = pd.DataFrame(
         {
@@ -141,11 +144,15 @@ def test_advanced_normalization():
         "DIM_COUNTRY": country_df,
     }
 
-    normalization_handler = NormalizationHandler(raw_df, "FAC_TABLE")
+    normalization_handler = NormalizationHandler(
+        NamedDataFrame(df=raw_df, name="FAC_TABLE")
+    )
 
-    normalization_handler.extract_new_table({"COUNTRY_ES", "COUNTRY_CA"}, "DIM_COUNTRY")
+    normalization_handler.extract_new_table(
+        "FAC_TABLE", {"COUNTRY_ES", "COUNTRY_CA"}, "DIM_COUNTRY"
+    )
 
-    normalization_handler.extract_new_table({"DAY"}, "DIM_DAY")
+    normalization_handler.extract_new_table("FAC_TABLE", {"DAY"}, "DIM_DAY")
 
     output_dataframes = normalization_handler.get_state()
 
@@ -228,11 +235,15 @@ def test_renaming():
         "DIM_COUNTRY": country_df,
     }
 
-    normalization_handler = NormalizationHandler(raw_df, "FAC_TABLE")
+    normalization_handler = NormalizationHandler(
+        NamedDataFrame(df=raw_df, name="FAC_TABLE")
+    )
 
-    normalization_handler.extract_new_table({"PAIS_ES", "PAIS_CA"}, "DIM_PAIS")
+    normalization_handler.extract_new_table(
+        "FAC_TABLE", {"PAIS_ES", "PAIS_CA"}, "DIM_PAIS"
+    )
 
-    normalization_handler.extract_new_table({"DIA"}, "DIM_DIA")
+    normalization_handler.extract_new_table("FAC_TABLE", {"DIA"}, "DIM_DIA")
 
     normalization_handler.rename_table("DIM_PAIS", "DIM_COUNTRY")
     normalization_handler.rename_column("DIM_COUNTRY", "PAIS_ES", "COUNTRY_ES")
@@ -252,11 +263,15 @@ def test_renaming():
 def test_pushable_dataframe_extraction():
     raw_df, _ = get_dataframe_3()
 
-    normalization_handler = NormalizationHandler(raw_df, "FAC_TABLE")
+    normalization_handler = NormalizationHandler(
+        NamedDataFrame(df=raw_df, name="FAC_TABLE")
+    )
 
-    normalization_handler.extract_new_table({"PAIS_ES", "PAIS_CA"}, "DIM_PAIS")
+    normalization_handler.extract_new_table(
+        "FAC_TABLE", {"PAIS_ES", "PAIS_CA"}, "DIM_PAIS"
+    )
 
-    normalization_handler.extract_new_table({"DIA"}, "DIM_DIA")
+    normalization_handler.extract_new_table("FAC_TABLE", {"DIA"}, "DIM_DIA")
 
     normalization_handler.rename_table("DIM_PAIS", "DIM_COUNTRY")
     normalization_handler.rename_column("DIM_COUNTRY", "PAIS_ES", "TX_ES")

@@ -126,34 +126,32 @@ class _ForeignKeyStateHandler:
             for pointing_table, foreign_keys in self.__foreign_keys.items()
         }
 
+class NamedDataFrame(NamedTuple):
+    """
+    Args:
+        df: The dataframe to normalize. It will be transformed and referred
+            to as the "main" dataframe in this instance.
+        name: The name that the SQL table corresponding to the main
+            dataframe should have in the database.
+    """
+    name: str
+    df: DataFrame
 
 class NormalizationHandler:
     """An interface to normalize a single dataframe into separate tables."""
 
-    def __init__(self, df: DataFrame, name: str) -> None:
-        """
-        Args:
-            df: The dataframe to normalize. It will be transformed and referred
-                to as the "main" dataframe in this instance.
-            name: The name that the SQL table corresponding to the main
-                dataframe should have in the database.
-        """
-        self.__original_main_dataframe = df
-        self.__main_table_name = name
-        self.__initialize_state()
+    def __init__(self, *dataframes: NamedDataFrame) -> None:
+        self.__original_named_dataframes = dataframes
+        self.__initialize_state(*dataframes)
 
-    def __initialize_state(self) -> None:
+    def __initialize_state(self, *dataframes: NamedDataFrame) -> None:
         self.__table_state: dict[str, DataFrame] = {
-            self.__main_table_name: self.__original_main_dataframe
+            named_df.name: named_df.df for named_df in dataframes
         }
         self.__foreign_key_handler = _ForeignKeyStateHandler()
 
     def reset_state(self) -> None:
-        self.__initialize_state()
-
-    def get_main_df(self) -> DataFrame:
-        """Fetches the main dataframe in its current state."""
-        return self.__table_state[self.__main_table_name]
+        self.__initialize_state(*self.__original_named_dataframes)
 
     def get_state(self) -> dict[str, DataFrame]:
         """Fetches all of the dataframes that have been extracted so far."""
@@ -201,9 +199,9 @@ class NormalizationHandler:
 
     def extract_new_table(
         self,
+        from_table: str,
         columns: set[str],
         new_table_name: str,
-        from_table: Optional[str] = None,
         new_column_name: Optional[str] = None,
     ) -> None:
         """Extracts a new table from a set of columns of the main dataframe.
@@ -217,11 +215,12 @@ class NormalizationHandler:
         an internal attribute.
 
         Args:
+            from_table: The table from which to extract the columns.
             columns: The set of columns from which to extract a new dataframe.
             new_table_name: The name that the SQL table corresponding to the
-                newly created dataframe should have in the database.
-            from_table: The table from which to extract the columns. Defaults
-                to the main dataframe.
+                newly created dataframe should have in the database. If a table
+                with this name already exists in this NormalizationHandler's
+                state, it is overridden.
             new_column_name: The name that the column containing the foreign key
                 to the newly created table should have in the main table. If
                 None, a custom heuristic is used to extract the name: remove,
@@ -229,8 +228,6 @@ class NormalizationHandler:
         """
         if new_column_name is None:
             new_column_name = f"ID_{new_table_name.split('_', 1)[-1]}"
-        if from_table is None:
-            from_table = self.__main_table_name
 
         column_list = list(columns)
 
@@ -242,11 +239,11 @@ class NormalizationHandler:
             base_df, new_table, column_list, new_column_name
         )
 
-        self.__table_state[self.__main_table_name] = substituted_table.copy()
+        self.__table_state[from_table] = substituted_table.copy()
         self.__table_state[new_table_name] = new_table.copy()
 
         self.__foreign_key_handler.add_foreign_key(
-            self.__main_table_name,
+            from_table,
             new_column_name,
             new_table_name,
             "ID",
@@ -317,14 +314,17 @@ class NormalizationHandler:
         self,
         coltypes: TableColumnDictionary[SQLType] = {},
         constraints: TableColumnDictionary[dict[str, Any]] = {},
+        foreign_keys: TableColumnDictionary[ForeignKey] = {},
     ) -> list[PushableDF]:
         """Transform the current table state into a list of PushableDFs.
 
         Args:
             coltypes: a dictionary mapping table names to dictionaries mapping
                 column names to their respective types.
-            constraints: a dictionary mapping table names to dictionaries mapping
-                column names to their desired constraints.
+            constraints: a dictionary mapping table names to dictionaries
+                mapping column names to their desired constraints.
+            foreign_keys: a dictionary mapping table names to dictionaries
+                mapping column names to sqlalchemy ForeignKey objects.
 
         Returns:
             A list of PushableDFs with correctly annotated foreign keys and
@@ -337,7 +337,7 @@ class NormalizationHandler:
                 table_name,
                 coltypes.get(table_name, {}),
                 constraints.get(table_name, {}),
-                all_foreign_keys.get(table_name, {}),
+                all_foreign_keys.get(table_name, {}) | foreign_keys.get(table_name, {}),
             )
             for table_name in self.__table_state.keys()
         ]
