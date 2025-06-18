@@ -4,8 +4,8 @@ from typing import Iterable
 
 import pandas as pd
 
+from src.sto_libdata import NamedDataFrame
 from src.sto_libdata.dataframe_handling.normalization import (
-    NamedDataFrame,
     NormalizationHandler,
 )
 

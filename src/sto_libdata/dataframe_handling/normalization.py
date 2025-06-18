@@ -1,13 +1,11 @@
 from collections import defaultdict
 from typing import Any, NamedTuple, Optional, cast
 
-import pandas as pd
 from sqlalchemy import ForeignKey
 from sqlalchemy.types import TypeEngine as SQLType
 
 from sto_libdata.dataframe_handling.pushable_dataframe import PushableDF
-
-type DataFrame = pd.DataFrame
+from .shared import DataFrame, NamedDataFrame
 
 
 class TableAndColumnName(NamedTuple):
@@ -125,17 +123,6 @@ class _ForeignKeyStateHandler:
             }
             for pointing_table, foreign_keys in self.__foreign_keys.items()
         }
-
-class NamedDataFrame(NamedTuple):
-    """
-    Args:
-        df: The dataframe to normalize. It will be transformed and referred
-            to as the "main" dataframe in this instance.
-        name: The name that the SQL table corresponding to the main
-            dataframe should have in the database.
-    """
-    name: str
-    df: DataFrame
 
 class NormalizationHandler:
     """An interface to normalize a single dataframe into separate tables."""
