@@ -149,7 +149,7 @@ class NormalizationHandler:
 
         Does not mutate the base dataset.
         """
-        new_table = base[column_list].drop_duplicates().copy()
+        new_table = base[column_list].dropna(how="all").drop_duplicates().copy()
 
         new_table.reset_index(drop=True, inplace=True)
         new_table["ID"] = new_table.index + 1
@@ -172,7 +172,12 @@ class NormalizationHandler:
         Does not mutate any of the datasets.
         """
 
-        merged = base.merge(dim, on=join_columns, suffixes=("", "___")).rename(
+        merged = base.merge(
+            dim,
+            on=join_columns,
+            suffixes=("", "___"),
+            how="left"
+        ).rename(
             columns={"ID___": fk_column_name}
         )
 
